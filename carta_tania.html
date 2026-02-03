@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Para Tania - Sincronización Perfecta</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Montserrat:wght@300;400;700&display=swap');
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            color: white;
+            font-family: 'Montserrat', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            user-select: none;
+        }
+
+        /* --- Fondo Animado --- */
+        #star-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
+        .moon { 
+            position: absolute; top: 30px; right: 50px; width: 70px; height: 70px; 
+            background: #fdf6e3; border-radius: 50%; box-shadow: 0 0 40px #fff; z-index: 1; 
+        }
+
+        /* --- Contenedor Principal --- */
+        .container {
+            position: relative;
+            z-index: 10;
+            width: 95%;
+            height: 85vh;
+            display: flex;
+            background: transparent;
+            gap: 20px;
+        }
+
+        .decor { position: absolute; font-size: 24px; text-shadow: 0 0 10px #000; z-index: 20; pointer-events: none; }
+        .top { top: -45px; width: 100%; text-align: center; letter-spacing: 12px; }
+        .bottom { bottom: -45px; width: 100%; text-align: center; letter-spacing: 12px; }
+
+        /* Sección Carta */
+        .carta {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            scrollbar-width: none;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 15px;
+            box-shadow: 0 0 15px rgba(255, 182, 193, 0.1);
+        }
+        .carta::-webkit-scrollbar { display: none; }
+        .carta h1 { font-family: 'Dancing Script', cursive; font-size: 3.5rem; color: #ffb6c1; text-align: center; margin-bottom: 20px; margin-top: 0; }
+        .carta p { font-size: 1.1rem; line-height: 1.7; text-align: justify; text-shadow: 2px 2px 8px #000; }
+
+        /* Sección Letra Sincronizada */
+        .lyrics-window {
+            flex: 1.2;
+            position: relative;
+            overflow: hidden;
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+        }
+
+        #lyrics-wrapper {
+            position: absolute;
+            width: 100%;
+            top: 50%;
+            left: 0;
+            transform: translateY(0);
+            transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+            text-align: center;
+            will-change: transform;
+        }
+
+        .line {
+            padding: 14px 10px;
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.2);
+            transition: all 0.4s ease;
+            text-shadow: 1px 1px 3px #000;
+            transform-origin: center;
+        }
+
+        .line.active {
+            color: #ffb6c1;
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-shadow: 0 0 20px rgba(255, 182, 193, 0.9);
+            transform: scale(1.05);
+            opacity: 1;
+        }
+
+        /* --- ESTRELLAS FUGACES MEJORADAS --- */
+        .shooting-star {
+            position: absolute;
+            width: 4px; /* Cabeza un poco más grande */
+            height: 4px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(255,255,255,0.8), 0 0 20px rgba(255,255,255,0.4), 0 0 30px rgba(255,182,193,0.3);
+            pointer-events: none;
+            z-index: 1; /* Detrás del contenido principal */
+            opacity: 0;
+        }
+
+        /* La cola de la estrella */
+        .shooting-star::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            right: 0; /* Se pega a la derecha de la cabeza */
+            width: 200px; /* Cola más larga */
+            height: 2px;
+            /* Degradado para que la cola se desvanezca */
+            background: linear-gradient(to right, rgba(255,255,255,0.8), transparent);
+        }
+
+        /* Controles */
+        .sync-controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 8px 20px;
+            border-radius: 30px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            opacity: 0.4;
+            transition: opacity 0.3s;
+            border: 1px solid rgba(255, 182, 193, 0.3);
+        }
+        
+        .sync-controls:hover { opacity: 1; }
+        
+        .sync-btn {
+            background: #ffb6c1;
+            border: none;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            cursor: pointer;
+            font-size: 16px;
+            color: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+            outline: none;
+        }
+        
+        .sync-btn:active { transform: scale(0.9); }
+        
+        #sync-value {
+            color: white;
+            font-size: 12px;
+            font-family: monospace;
+            min-width: 70px;
+            text-align: center;
+        }
+
+        /* Instrucción inicial */
+        #play-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 999;
+            display: flex; justify-content: center; align-items: center; flex-direction: column;
+            cursor: pointer; transition: opacity 0.5s;
+        }
+        #play-overlay h2 { font-family: 'Dancing Script'; font-size: 3rem; color: #ffb6c1; }
+
+        @media (max-width: 768px) {
+            .container { flex-direction: column; height: 90vh; }
+            .carta { flex: 0 0 40%; font-size: 0.9rem; padding: 20px; }
+            .lyrics-window { flex: 1; border-left: none; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 10px; }
+            .sync-controls { bottom: 10px; padding: 5px 15px; }
+            .moon { width: 40px; height: 40px; top: 15px; right: 15px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="play-overlay">
+        <h2>Para Tania ❤️</h2>
+        <p style="color: #ddd;">Haz clic para comenzar</p>
+    </div>
+
+    <audio id="audio-peint" src="peint.mp3" preload="auto"></audio>
+    <canvas id="star-canvas"></canvas>
+    <div class="moon"></div>
+
+    <div class="container">
+        <div class="decor top">🌷 ❤️ 🌷 ❤️ 🌷 ❤️ 🌷 ❤️ 🌷</div>
+
+        <div class="carta">
+            <h1>Para Tania</h1>
+            <p>
+                Tania, amor de mi vida, hoy quiero detenerme un 
+                momento para intentar poner en palabras la 
+                inmensidad de lo que siento por ti, aunque sé 
+                que cualquier frase se queda corta ante la 
+                realidad de mi amor. <strong>3 de abril de 2025</strong>, el día en que decidimos unir nuestros caminos y empezar
+                oficialmente esta historia, mi mundo cambió por
+                completo y cobró un sentido que nunca antes
+                había conocido. Eres la luz que ilumina mis días
+                más grises y la paz que encuentro al
+                final de cada jornada; cada segundo a tu lado es un
+                regalo que atesoro con todo mi corazón, porque
+                porque no hay lugar en el mundo donde me sienta 
+                más pleno y feliz que estando junto a ti.
+                <br><br>
+                Estos meses que hemos compartido han sido, 
+                sin duda alguna, los mejores de toda mi vida, 
+                llenos de risas, de complicidad y de un 
+                crecimiento que solo es posible porque estás tú 
+                a mi lado. Me has enseñado lo que significa el 
+                amor verdadero, ese que es paciente, que apoya 
+                y que sueña en conjunto, y por eso tengo la 
+                certeza absoluta de que eres el amor de mi vida. 
+                Te amo con una profundidad que trasciende 
+                cualquier explicación, y mi mayor deseo es 
+                seguir construyendo este futuro contigo, 
+                celebrando cada mes y cada año que el destino 
+                nos permita caminar de la mano. Eres mi todo, 
+                Tania, y te amo más de lo que jamás podrías imaginar.
+                <br><br>
+                Te amo profundamente. Felices 10 meses.
+            </p>
+        </div>
+
+        <div class="lyrics-window">
+            <div id="lyrics-wrapper"></div>
+        </div>
+        
+        <div class="decor bottom">🌷 ❤️ 🌷 ❤️ 🌷 ❤️ 🌷 ❤️ 🌷</div>
+    </div>
+    
+    <div class="sync-controls">
+        <button class="sync-btn" id="sync-minus">-</button>
+        <span id="sync-value">0ms</span>
+        <button class="sync-btn" id="sync-plus">+</button>
+        <button class="sync-btn" id="sync-test">▶</button>
+    </div>
+
+    <script>
+        // --- DATA DE LA CANCIÓN  ---
+        const lyrics = [
+            { t: 0.0, txt: "Eres tú, tú-ru-ru" },
+            { t: 8.8, txt: "Eres tú y tú y tú, tú-ru-ru-ru" },
+            { t: 15.8, txt: "Mmm, oh-oh" },
+            { t: 22.8, txt: "Eres tú, yeah, tú-ru-ru-ru" },
+            { t: 33.8, txt: "La que me fascina" },
+            { t: 38.0, txt: "La que me domina" },
+            { t: 40.8, txt: "Mi mente se alinea cuando caminas" },
+            { t: 46.0, txt: "Eres tú la calma y la ruina" },
+            { t: 53.8, txt: "La voz que suena" },
+            { t: 57.8, txt: "Cuando el alma suspira" },
+            { t: 60.6, txt: "Tus ojos son fuego en la neblina" },
+            { t: 62.4, txt: "Tu risa me quema, me ilumina" },
+            { t: 64.8, txt: "Y si no estás, el mundo gira" },
+            { t: 67.2, txt: "Pero sin rumbo, sin salida" },
+            { t: 71.4, txt: "Eres tú (tú y tú y tú)" },
+            { t: 73.8, txt: "Tú-ru-ru-ru (tú y tú y tú)" },
+            { t: 76.2, txt: "Eres tú (tú y tú y tú)" },
+            { t: 78, txt: "Tú-ru-ru-ru" },
+            { t: 80.4, txt: "Eres tú (tú y tú y tú)" },
+            { t: 82.98, txt: "Tú-ru-ru-ru (tú y tú y tú)" },
+            { t: 85.2, txt: "Eres tú (tú y tú y tú)" },
+            { t: 86.4, txt: "Tú-ru-ru-ru" },
+            { t: 89.4, txt: "Eres tan perfecta" },
+            { t: 91.2, txt: "Tan sincera, tan real, que me desespera" },
+            { t: 94.2, txt: "Eres la razón por la que aún espero" },
+            { t: 120.6, txt: "La voz que suena cuando muero" },
+            { t: 123.8, txt: "Eres tú la que me enciende por dentro" },
+            { t: 127.2, txt: "Eres tú, mi mejor pensamiento" },
+            { t: 131.4, txt: "Tus besos saben a calma y a miedo" },
+            { t: 134.8, txt: "A promesas que aún no entiendo" },
+            { t: 136.2, txt: "Tus abrazos detienen el tiempo" },
+            { t: 138.6, txt: "Y en tus brazos todo tiene sentido" },
+            { t: 141.6, txt: "Tu mirada tan profunda y clara" },
+            { t: 143.4, txt: "Rompe el ruido, calla el alma" },
+            { t: 145.2, txt: "Y tu sonrisa, mi desgracia" },
+            { t: 147.0, txt: "Mi adicción, mi esperanza" },
+            { t: 151.8, txt: "Solo tú" },
+            { t: 153.0, txt: "(Ah-ah-ah)" },
+            { t: 153.6, txt: "Tan solo tú" },
+            { t: 154.8, txt: "(Ah-ah-ah)" },
+            { t: 180.8, txt: "Eres tú, yeah" },
+            { t: 200.4, txt: "Eres tú (la que)" },
+            { t: 202.8, txt: "Me domina, mi dopamina, mi medicina" },
+            { t: 205.2, txt: "Eres tú (la que me)" },
+            { t: 207, txt: "La que me ilumina, mi calma, mi herida" },
+            { t: 209.4, txt: "Más y más de ti (ti-ti)" },
+            { t: 211.2, txt: "De ti, de ti (ti-ti)" },
+            { t: 213.6, txt: "Más y más de ti" },
+            { t: 215.4, txt: "Más, más, más, más de ti" },
+            { t: 242.4, txt: "De ti (tú y tú y tú)" },
+            { t: 246, txt: "(Tú y tú y tú)" },
+            { t: 246.6, txt: "Mucho más (tú y tú y tú)" },
+            { t: 250.8, txt: "Porque solo eres tú (tú y tú y tú)" },
+            { t: 253.2, txt: "Tan solo tú (tú y tú y tú)" },
+            { t: 255.6, txt: "Eres tú-ru-uh, tú-ru-ru-ru, tú y tú y tú, tú-ru" },
+            { t: 261, txt: "Tan solo tú, solo tú y nada más, tú, tú-ru-ru-ru" }
+        ];
+
+        const audio = document.getElementById('audio-peint');
+        const wrapper = document.getElementById('lyrics-wrapper');
+        const playOverlay = document.getElementById('play-overlay');
+        
+        let syncOffset = 0;
+        let lastActiveIndex = -1;
+        let animationFrameId;
+
+        // Renderizar letras
+        lyrics.forEach((line, i) => {
+            const div = document.createElement('div');
+            div.className = 'line';
+            div.innerText = line.txt;
+            wrapper.appendChild(div);
+        });
+
+        audio.onerror = () => {
+            alert("No se pudo cargar la canción 'peint.mp3'. Verifica el nombre del archivo.");
+        };
+
+        // --- MOTOR DE SINCRONIZACIÓN ---
+        function updateLyrics() {
+            if (audio.paused) return;
+
+            const currentTime = audio.currentTime + syncOffset;
+            let activeIndex = -1;
+
+            for (let i = 0; i < lyrics.length; i++) {
+                if (currentTime >= lyrics[i].t) {
+                    if (i === lyrics.length - 1 || currentTime < lyrics[i + 1].t) {
+                        activeIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            if (activeIndex !== lastActiveIndex) {
+                const prev = wrapper.querySelector('.active');
+                if (prev) prev.classList.remove('active');
+
+                if (activeIndex !== -1) {
+                    const activeLine = wrapper.children[activeIndex];
+                    activeLine.classList.add('active');
+                    const offset = -(activeLine.offsetTop + (activeLine.offsetHeight / 2));
+                    wrapper.style.transform = `translateY(${offset}px)`;
+                }
+                lastActiveIndex = activeIndex;
+            }
+
+            animationFrameId = requestAnimationFrame(updateLyrics);
+        }
+
+        // --- CONTROLADORES DE EVENTOS ---
+        playOverlay.addEventListener('click', () => {
+            audio.play().then(() => {
+                playOverlay.style.opacity = '0';
+                setTimeout(() => playOverlay.remove(), 500);
+            }).catch(e => console.log("Error al reproducir:", e));
+        });
+
+        audio.addEventListener('play', () => {
+            if (!animationFrameId) updateLyrics();
+        });
+
+        audio.addEventListener('pause', () => {
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+        });
+
+        audio.addEventListener('ended', () => {
+            cancelAnimationFrame(animationFrameId);
+            wrapper.style.transform = 'translateY(0)';
+            const active = wrapper.querySelector('.active');
+            if(active) active.classList.remove('active');
+        });
+
+        const updateSyncDisplay = () => {
+            const ms = Math.round(syncOffset * 1000);
+            document.getElementById('sync-value').innerText = `${ms > 0 ? '+' : ''}${ms}ms`;
+        };
+
+        document.getElementById('sync-minus').onclick = (e) => { e.stopPropagation(); syncOffset -= 0.1; updateSyncDisplay(); };
+        document.getElementById('sync-plus').onclick = (e) => { e.stopPropagation(); syncOffset += 0.1; updateSyncDisplay(); };
+        document.getElementById('sync-test').onclick = (e) => { e.stopPropagation(); if(audio.paused) audio.play(); else audio.pause(); };
+
+        // --- FONDO DE ESTRELLAS ESTÁTICO ---
+        const canvas = document.getElementById('star-canvas');
+        const ctx = canvas.getContext('2d');
+        let starsBg = [];
+
+        function initStarsBg() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            starsBg = [];
+            for(let i = 0; i < 250; i++) {
+                starsBg.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    r: Math.random() * 1.5,
+                    o: Math.random(),
+                    s: (Math.random() * 0.01) + 0.005
+                });
+            }
+        }
+
+        function animateStarsBg() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            starsBg.forEach(s => {
+                s.o += s.s;
+                if(s.o > 1 || s.o < 0) s.s = -s.s;
+                ctx.globalAlpha = Math.max(0, Math.min(1, s.o));
+                ctx.fillStyle = "white";
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            requestAnimationFrame(animateStarsBg);
+        }
+
+        initStarsBg();
+        animateStarsBg();
+        window.onresize = initStarsBg;
+
+        // --- GENERADOR DE ESTRELLAS FUGACES MEJORADO ---
+        function createShootingStar() {
+            const star = document.createElement('div');
+            star.classList.add('shooting-star');
+
+            // 1. Posición inicial aleatoria (preferiblemente arriba a la derecha)
+            const startX = Math.random() * window.innerWidth;
+            const startY = Math.random() * (window.innerHeight * 0.5); // Solo mitad superior
+
+            star.style.left = `${startX}px`;
+            star.style.top = `${startY}px`;
+
+            // 2. Calcular trayectoria (siempre hacia abajo y a la izquierda)
+            const distanceX = - (Math.random() * 600 + 300); // Mueve entre 300 y 900px a la izquierda
+            const distanceY = Math.random() * 500 + 200;     // Mueve entre 200 y 700px hacia abajo
+            const duration = Math.random() * 2 + 1.5;        // Duración entre 1.5s y 3.5s
+
+            // Calcular el ángulo de rotación para que la cola apunte correctamente
+            const angle = Math.atan2(distanceY, distanceX) * (180 / Math.PI);
+            
+            // Aplicar animación usando la API Web Animations
+            star.animate([
+                { transform: `translate(0, 0) rotate(${angle}deg)`, opacity: 1 },
+                { transform: `translate(${distanceX}px, ${distanceY}px) rotate(${angle}deg)`, opacity: 0 }
+            ], {
+                duration: duration * 1000,
+                easing: 'ease-out',
+                fill: 'forwards'
+            });
+
+            document.body.appendChild(star);
+
+            // Limpieza
+            setTimeout(() => { star.remove(); }, duration * 1000 + 100);
+
+            // Programar la siguiente estrella (tiempo aleatorio para que no sea monótono)
+            // Aparecerá una nueva estrella entre 0.5 y 2.5 segundos después de la anterior.
+            setTimeout(createShootingStar, Math.random() * 2000 + 500);
+        }
+
+        // Iniciar el ciclo de estrellas fugaces
+        createShootingStar();
+
+    </script>
+</body>
+</html>
